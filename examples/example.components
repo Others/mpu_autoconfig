@@ -1,0 +1,13 @@
+component Server = {
+    memory = 100 mb
+
+    interface Service = {
+        memory = 10 mb
+    }
+}
+
+component Client = {
+    memory = 50 mb
+
+    service MyService = Server.Service
+}
