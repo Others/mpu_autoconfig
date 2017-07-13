@@ -3,7 +3,7 @@
 import z3
 
 REGION_COUNT = 1
-SUBREGION_COUNT = 2
+SUBREGION_COUNT = 1
 
 
 # For each component, for each region, create variables:
@@ -39,7 +39,7 @@ class Region(object):
         subregion_size = self.size / SUBREGION_COUNT
         subregion_start = self.start + subregion_size * subregion_number
         subregion_end = subregion_start + subregion_size
-        return z3.And(address >= z3.BV2Int(subregion_start), address < z3.BV2Int(subregion_end))
+        return z3.And(z3.UGE(address, subregion_start), z3.ULT(address, subregion_end))
 
     def accessible_in_subregion(self, address, subregion_number):
         assert subregion_number < SUBREGION_COUNT
@@ -65,7 +65,7 @@ class Area(object):
         self.size = size
 
     def contains(self, address):
-        return z3.And(address > z3.BV2Int(self.start), address < z3.BV2Int(self.start + self.size))
+        return z3.And(z3.UGE(address, self.start), z3.ULT(address, self.start + self.size))
 
 
 def mb(x):
@@ -84,9 +84,9 @@ def bvadd_no_overflow(x, y, signed=False):
 
 
 # components = [Component("server"), Component("client")]
-areas = [Area("server/main", mb(128), ["server"]),
-         Area("client/main", mb(128), ["client"]),
-         Area("server+client/service", mb(8), ["server", "client"])]
+# areas = [Area("server/main", mb(1), ["server"]),
+#          Area("client/main", mb(1), ["client"]),
+#          Area("server+client/service", mb(1), ["server", "client"])]
 components = [Component("server")]
 areas = [Area("server/main", 1024, ["server"])]
 
@@ -130,14 +130,14 @@ for a in areas:
     forall_var_count = 0
     for c in authorized_components:
         # Using a different variable each time for saftey
-        address = z3.Int("fa_address_" + str(forall_var_count))
+        address = z3.BitVec("fa_address_" + str(forall_var_count), 32)
         forall_var_count += 1
         # Then doing the check
         s.add(z3.ForAll(address, z3.Or(z3.Not(a.contains(address)), c.can_access(address))))
         # s.add(z3.ForAll(address, z3.Not(a.contains(address))))
     for c in unauthorized_components:
         # Using a different variable each time for saftey
-        address = z3.Int("fa_address_" + str(forall_var_count))
+        address = z3.BitVec("fa_address_" + str(forall_var_count), 32)
         forall_var_count += 1
         # Then doing the check
         s.add(z3.ForAll(address, z3.Not(z3.And(a.contains(address), c.can_access(address)))))
