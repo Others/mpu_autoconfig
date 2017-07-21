@@ -16,6 +16,20 @@ def is_pow_of_2(x):
     return (x & (x - 1)) == 0
 
 
+def overlap(r1, r2):
+    return And(ULT(r1.start, r2.end), ULT(r2.start, r1.end))
+
+
+def any_overlap(ranges):
+    predicates = []
+    already_checked = []
+    for r1 in ranges:
+        for r2 in already_checked:
+            predicates.append(overlap(r1, r2))
+        already_checked.append(r1)
+    return Or(*predicates)
+
+
 class HardwareConfig(object):
     def __init__(self, region_min_size=256, region_count=8, subregion_count=8):
         self.region_min_size = region_min_size
@@ -35,11 +49,13 @@ class Component(object):
         return "Component({}, {})".format(self.name, self.hw_config)
 
     def is_consistent(self):
+        # Regions cannot overlap
+        self_consistency = [Not(any_overlap(self.regions))]
         # TODO: Add constraint that regions don't overlap
         region_consistency = []
         for r in self.regions:
             region_consistency += r.is_consistent()
-        return region_consistency
+        return self_consistency + region_consistency
 
     def can_read(self, addr):
         region_readiblity = []
@@ -174,9 +190,11 @@ def model(components, arenas):
     for c in components:
         s.add(c.is_consistent())
 
-    # TODO: Add constraint that arenas don't overlap
     for a in arenas:
         s.add(a.is_consistent())
         s.add(a.access_consistent(components))
+
+    # Arenas can't overlap
+    s.add(Not(any_overlap(arenas)))
 
     return s
