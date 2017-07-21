@@ -3,7 +3,7 @@
 from abc import ABC
 
 import z3
-from z3 import And, Bool, BitVec, BitVecRef, ForAll, Not, Or, UGE, ULE
+from z3 import And, Bool, BitVec, BitVecRef, ForAll, Implies, Not, Or, UGE, ULE
 
 # TODO: Put these into a "HardwareConfig" class
 REGION_MIN_SIZE = 256
@@ -27,6 +27,9 @@ class Component(object):
         self.regions = []
         for i in range(REGION_COUNT):
             self.regions.append(Region(self, i))
+
+    def __str__(self):
+        return "Component " + self.name
 
     def is_consistent(self):
         # TODO: Add constraint that regions don't overlap
@@ -120,25 +123,25 @@ class Arena(ABC):
         for r in self.readers:
             constraints.append(self.readable_by(r))
 
-        non_readers = filter(lambda c: c not in self.readers, all_components)
+        non_readers = list(filter(lambda c: c not in self.readers, all_components))
         for r in non_readers:
             constraints.append(Not(self.readable_by(r)))
 
         for r in self.writers:
             constraints.append(self.writeable_by(r))
 
-        non_writers = filter(lambda c: c not in self.writers, all_components)
+        non_writers = list(filter(lambda c: c not in self.writers, all_components))
         for r in non_writers:
             constraints.append(Not(self.writeable_by(r)))
         return constraints
 
     def readable_by(self, component):
         addr = BitVec("addr", 32)
-        return ForAll(addr, z3.And(self.contains(addr), component.can_read(addr)))
+        return ForAll(addr, Implies(self.contains(addr), component.can_read(addr)))
 
     def writeable_by(self, component):
         addr = BitVec("addr", 32)
-        return ForAll(addr, z3.And(self.contains(addr), component.can_write(addr)))
+        return ForAll(addr, Implies(self.contains(addr), component.can_write(addr)))
 
 
 class PartitionArena(Arena):
@@ -156,20 +159,17 @@ class FixedArena(Arena):
     def __init__(self, name, start, end, readers, writers):
         super().__init__(name, start, end, readers, writers)
 
-# components = [Component("server")]
-# areas = [Area("server/main", 1024, ["server"])]
-
 
 def model(components, arenas):
     s = z3.Solver()
+    s.set(unsat_core=True)
 
     for c in components:
-        print (c.is_consistent())
-        s.add(*c.is_consistent())
+        s.add(c.is_consistent())
 
     # TODO: Add constraint that arenas don't overlap
     for a in arenas:
-        s.add(*a.is_consistent())
-        s.add(*a.access_consistent(components))
+        s.add(a.is_consistent())
+        s.add(a.access_consistent(components))
 
     return s
