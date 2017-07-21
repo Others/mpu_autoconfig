@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 
 from z3 import sat, set_option, unsat
-from solver import Component, Partition, PartitionArena, model
+from solver import Component, HardwareConfig, Partition, PartitionArena, model
 
 
 def kb(x):
@@ -16,6 +16,7 @@ if __name__ == '__main__':
     # Prevent truncated output
     set_option(max_args=10000000, max_lines=1000000, max_depth=10000000, max_visited=1000000)
 
+    # hw_config = HardwareConfig(region_count=2, subregion_count=1)
     # component = Component("server")
     #
     # flash = Partition("flash", 0x08000000, 0x08000000 + mb(1))
@@ -27,8 +28,10 @@ if __name__ == '__main__':
     # components = [component]
     # arenas = [component_code, component_main]
 
-    server = Component("server")
-    client = Component("client")
+    hw_config = HardwareConfig(region_count=3, subregion_count=1)
+
+    server = Component("server", hw_config)
+    client = Component("client", hw_config)
 
     flash = Partition("flash", 0x08000000, 0x08000000 + mb(1))
     sram = Partition("sram", 0x20000000, 0x20000000 + kb(512))

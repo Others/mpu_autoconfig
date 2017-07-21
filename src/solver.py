@@ -5,11 +5,6 @@ from abc import ABC
 import z3
 from z3 import And, Bool, BitVec, BitVecRef, ForAll, Implies, Not, Or, UGE, ULE
 
-# TODO: Put these into a "HardwareConfig" class
-REGION_MIN_SIZE = 256
-REGION_COUNT = 3
-SUBREGION_COUNT = 1
-
 
 def ULT(a, b):
     if isinstance(a, BitVecRef) or isinstance(b, BitVecRef):
@@ -21,15 +16,23 @@ def is_pow_of_2(x):
     return (x & (x - 1)) == 0
 
 
-class Component(object):
-    def __init__(self, name):
-        self.name = name
-        self.regions = []
-        for i in range(REGION_COUNT):
-            self.regions.append(Region(self, i))
+class HardwareConfig(object):
+    def __init__(self, region_min_size=256, region_count=8, subregion_count=8):
+        self.region_min_size = region_min_size
+        self.region_count = region_count
+        self.subregion_count = subregion_count
 
-    def __str__(self):
-        return "Component " + self.name
+
+class Component(object):
+    def __init__(self, name, hw_config):
+        self.name = name
+        self.hw_config = hw_config
+        self.regions = []
+        for i in range(hw_config.region_count):
+            self.regions.append(Region(self, i, hw_config))
+
+    def __repr__(self):
+        return "Component({}, {})".format(self.name, self.hw_config)
 
     def is_consistent(self):
         # TODO: Add constraint that regions don't overlap
@@ -52,24 +55,28 @@ class Component(object):
 
 
 class Region(object):
-    def __init__(self, owner, number):
+    def __init__(self, owner, number, hw_config):
         self.owner = owner
         self.name = self.owner.name + "/r_" + str(number)
+        self.hw_config = hw_config
+
         self.start = BitVec(self.name + "/start", 32)
         self.size = BitVec(self.name + "/size", 32)
         self.end = self.start + self.size
-        subregion_size = self.size / SUBREGION_COUNT
+        subregion_size = self.size / hw_config.subregion_count
         self.subregions = []
-        for i in range(SUBREGION_COUNT):
+        for i in range(hw_config.subregion_count):
             start = self.start + i * subregion_size
             self.subregions.append(Subregion(self, i, start, start + subregion_size))
         self.readable = Bool(self.name + "/can_read")
         self.writeable = Bool(self.name + "/can_write")
 
     def is_consistent(self):
-        return [ULT(self.start, self.end),  is_pow_of_2(self.size),
-                self.size % SUBREGION_COUNT == 0, self.start % self.size == 0,
-                UGE(self.size, REGION_MIN_SIZE)]
+        return [ULT(self.start, self.end),
+                is_pow_of_2(self.size),
+                self.size % self.hw_config.subregion_count == 0,
+                self.start % self.size == 0,
+                UGE(self.size, self.hw_config.region_min_size)]
 
     def is_enabled(self, addr):
         subregion_enabled = []
