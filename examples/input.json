@@ -1,0 +1,62 @@
+{
+    "hardware_configuration": {
+        "min_region_size": 256,
+        "region_count": 8,
+        "subregion_count": 8
+    },
+    "partitions": [
+        {
+            "name": "flash",
+            "start": 8000000,
+            "end": 8010000
+        },
+        {
+            "name": "sram",
+            "start": 20000000,
+            "end": 20010000
+        }
+
+    ],
+    "components": [
+        "server",
+        "client"
+    ],
+    "arenas": [
+        {
+            "name": "server/code",
+            "size": 1000,
+            "type": "partition_arena",
+            "partition": "flash"
+        },
+        {
+            "name": "server/data",
+            "size": 8000,
+            "type": "partition_arena",
+            "partition": "sram"
+        },
+        {
+            "name": "server/io",
+            "size": 8000,
+            "type": "fixed_arena",
+            "position": 30000000
+        },
+        {
+            "name": "client/code",
+            "size": 1000,
+            "type": "partition_arena",
+            "partition": "flash"
+        },
+        {
+            "name": "client/flash",
+            "size": 8000,
+            "type": "partition_arena",
+            "partition": "sram"
+        },
+        {
+            "name": "server+client/shared",
+            "size": 8000,
+            "type": "partition_arena",
+            "partition": "sram"
+        }
+    ]
+}

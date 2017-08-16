@@ -1,0 +1,28 @@
+{
+    "arenas": [
+        {
+            "name": "arena_name",
+            "start": 1000000,
+            "end": 1100000
+        }
+    ],
+    "components": [
+        {
+            "name": "component_name",
+            "regions": [
+                {
+                    "start": 1000000,
+                    "size": 1000,
+                    "readable": true,
+                    "writeable": false
+                },
+                {
+                    "start": 1500000,
+                    "size": 5000,
+                    "readable": true,
+                    "writeable": true
+                }
+            ]
+        }
+    ]
+}
