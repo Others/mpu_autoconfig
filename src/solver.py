@@ -3,13 +3,13 @@
 from abc import ABC
 
 import z3
-from z3 import And, Bool, BitVec, BitVecRef, ForAll, Implies, Not, Or, UGE, ULE
+from z3 import And, Bool, BitVec, Exists, ForAll, Implies, Not, Or, UGE, ULE
 
 
 def ULT(a, b):
-    if isinstance(a, BitVecRef) or isinstance(b, BitVecRef):
-        return z3.ULT(a, b)
-    return a < b
+    if isinstance(a, int) and isinstance(b, int):
+        return a < b
+    return z3.ULT(a, b)
 
 
 def is_pow_of_2(x):
@@ -27,7 +27,7 @@ def any_overlap(ranges):
         for r2 in already_checked:
             predicates.append(overlap(r1, r2))
         already_checked.append(r1)
-    return Or(*predicates)
+    return Or(predicates)
 
 
 class HardwareConfig(object):
@@ -51,7 +51,6 @@ class Component(object):
     def is_consistent(self):
         # Regions cannot overlap
         self_consistency = [Not(any_overlap(self.regions))]
-        # TODO: Add constraint that regions don't overlap
         region_consistency = []
         for r in self.regions:
             region_consistency += r.is_consistent()
@@ -61,13 +60,13 @@ class Component(object):
         region_readiblity = []
         for r in self.regions:
             region_readiblity.append(r.can_read(addr))
-        return Or(*region_readiblity)
+        return Or(region_readiblity)
 
     def can_write(self, addr):
         region_writeablity = []
         for r in self.regions:
             region_writeablity.append(r.can_write(addr))
-        return Or(*region_writeablity)
+        return Or(region_writeablity)
 
 
 class Region(object):
@@ -98,7 +97,7 @@ class Region(object):
         subregion_enabled = []
         for sr in self.subregions:
             subregion_enabled.append(sr.is_enabled(addr))
-        return Or(*subregion_enabled)
+        return Or(subregion_enabled)
 
     def can_read(self, addr):
         return And(self.readable, self.is_enabled(addr))
@@ -134,6 +133,9 @@ class Arena(ABC):
         self.readers = readers
         self.writers = writers
 
+    def __repr__(self):
+        return "Arena({}, {}, {})".format(self.name, self.start, self.end)
+
     def is_consistent(self):
         return [ULT(self.start, self.end)]
 
@@ -147,24 +149,41 @@ class Arena(ABC):
             constraints.append(self.readable_by(r))
 
         non_readers = list(filter(lambda c: c not in self.readers, all_components))
-        for r in non_readers:
-            constraints.append(Not(self.readable_by(r)))
+        for nr in non_readers:
+            constraints.append(self.not_readable_by(nr))
 
-        for r in self.writers:
-            constraints.append(self.writeable_by(r))
+        for w in self.writers:
+            constraints.append(self.writeable_by(w))
 
         non_writers = list(filter(lambda c: c not in self.writers, all_components))
-        for r in non_writers:
-            constraints.append(Not(self.writeable_by(r)))
+        for nw in non_writers:
+            constraints.append(self.not_writeable_by(nw))
         return constraints
 
     def readable_by(self, component):
-        addr = BitVec("addr", 32)
+        addr = new_addr()
         return ForAll(addr, Implies(self.contains(addr), component.can_read(addr)))
 
+    def not_readable_by(self, component):
+        addr = new_addr()
+        return Not(Exists(addr, And(self.contains(addr), component.can_read(addr))))
+
     def writeable_by(self, component):
-        addr = BitVec("addr", 32)
+        addr = new_addr()
         return ForAll(addr, Implies(self.contains(addr), component.can_write(addr)))
+
+    def not_writeable_by(self, component):
+        addr = new_addr()
+        return Not(Exists(addr, And(self.contains(addr), component.can_write(addr))))
+
+
+count = -1
+
+
+def new_addr():
+    global count
+    count += 1
+    return BitVec("addr({})".format(count), 32)
 
 
 class PartitionArena(Arena):
@@ -185,10 +204,9 @@ class FixedArena(Arena):
 
 def model(components, arenas):
     s = z3.Solver()
-    s.set(unsat_core=True)
 
     for c in components:
-        s.add(c.is_consistent())
+        s.add(*c.is_consistent())
 
     for a in arenas:
         s.add(a.is_consistent())
