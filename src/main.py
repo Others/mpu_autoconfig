@@ -12,7 +12,7 @@ def mb(x):
     return x * (1024 ** 2)
 
 
-def gen_config(size):
+def gen_config(size, complex_overlap_constraint):
     # hw_config = HardwareConfig(region_count=2, subregion_count=1)
     # component1 = Component("component1", hw_config)
     # component2 = Component("component2", hw_config)
@@ -29,7 +29,7 @@ def gen_config(size):
     # components = [component1, component2]
     # arenas = [component1_code, component1_main, component2_code, component2_main]
 
-    hw_config = HardwareConfig(region_count=3, subregion_count=1)
+    hw_config = HardwareConfig(complex_overlap_constraint=complex_overlap_constraint)
 
     server = Component("server", hw_config)
     client = Component("client", hw_config)
@@ -51,9 +51,9 @@ def gen_config(size):
     return (components, arenas)
 
 
-def test_shrinking(max_size):
+def test_shrinking(max_size, complex_overlap_constraint):
     print("Starting shrinking test!")
-    (components, arenas) = gen_config(max_size)
+    (components, arenas) = gen_config(max_size, complex_overlap_constraint)
 
     s = model(components, arenas)
     result = s.check()
@@ -67,7 +67,7 @@ def test_shrinking(max_size):
     while (smallest_working_size - largest_failing_size) > 1:
         print("Current parameters:", smallest_working_size, largest_failing_size)
         size_to_check = (smallest_working_size + largest_failing_size) // 2
-        (components, arenas) = gen_config(size_to_check)
+        (components, arenas) = gen_config(size_to_check, complex_overlap_constraint)
         s = model(components, arenas)
         result = s.check()
         print(result)
@@ -80,22 +80,39 @@ def test_shrinking(max_size):
     return smallest_working_size
 
 
+def check_fragmentation(max_size):
+    (components, arenas) = gen_config(max_size, False)
+    min_size = sum(map(lambda a: a.size,
+                       filter(lambda a: isinstance(a, PartitionArena) and a.partition.name == "sram", arenas)))
+    print("Min size", min_size)
+
+    # Do shrinking for non complex case
+    min_complex = test_shrinking(max_size, True)
+    print("Min(complex)", min_complex)
+    min_non_complex = test_shrinking(max_size, False)
+    print("Min(non_complex)", min_non_complex)
+
+    print("Overhead(non_complex):", (min_non_complex - min_size) / min_size)
+    print("Overhead(complex):", (min_complex - min_size) / min_size)
+
+
 if __name__ == '__main__':
     # Prevent truncated output
     set_option(max_args=10000000, max_lines=1000000, max_depth=10000000, max_visited=1000000)
 
-    # Absolute min 107560
-    smallest_working_size = test_shrinking(kb(1000))
-    print("Smallest working size", smallest_working_size)
+    check_fragmentation(kb(1000))
 
-    (components, arenas) = gen_config(smallest_working_size)
-    s = model(components, arenas)
-
-    print(s.assertions())
-
-    check_result = s.check()
-    print(check_result)
-    if check_result == sat:
-        print(s.model())
-    elif check_result == unsat:
-        print(s.unsat_core())
+    # smallest_working_size = test_shrinking(kb(1000))
+    # print("Smallest working size", smallest_working_size)
+    #
+    # (components, arenas) = gen_config(smallest_working_size)
+    # s = model(components, arenas)
+    #
+    # print(s.assertions())
+    #
+    # check_result = s.check()
+    # print(check_result)
+    # if check_result == sat:
+    #     print(s.model())
+    # elif check_result == unsat:
+    #     print(s.unsat_core())

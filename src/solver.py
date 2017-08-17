@@ -3,7 +3,7 @@
 from abc import ABC
 
 import z3
-from z3 import And, Bool, BitVec, Exists, ForAll, Implies, Not, Or, UGE, ULE
+from z3 import And, Bool, BitVec, Exists, ForAll, If, Implies, Not, Or, UGE, ULE
 
 
 def ULT(a, b):
@@ -30,11 +30,20 @@ def any_overlap(ranges):
     return Or(predicates)
 
 
+def at_most_one(predicates):
+    as_ints = []
+    for p in predicates:
+        as_ints.append(If(p, 1, 0))
+    return sum(as_ints) <= 1
+
+
 class HardwareConfig(object):
-    def __init__(self, region_min_size=256, region_count=8, subregion_count=8):
+    def __init__(self, region_min_size=256, region_count=8, subregion_count=8,
+                 complex_overlap_constraint=False):
         self.region_min_size = region_min_size
         self.region_count = region_count
         self.subregion_count = subregion_count
+        self.complex_overlap_constraint = complex_overlap_constraint
 
 
 class Component(object):
@@ -48,9 +57,21 @@ class Component(object):
     def __repr__(self):
         return "Component({}, {})".format(self.name, self.hw_config)
 
+    def only_single_enabled_region(self):
+        addr = BitVec("addr", 32)
+        region_predicates = []
+        for r in self.regions:
+            region_predicates.append(r.is_enabled(addr))
+        return ForAll(addr, at_most_one(region_predicates))
+
     def is_consistent(self):
         # Regions cannot overlap
-        self_consistency = [Not(any_overlap(self.regions))]
+        self_consistency = []
+        if self.hw_config.complex_overlap_constraint:
+            self_consistency.append(self.only_single_enabled_region())
+        else:
+            self_consistency.append(Not(any_overlap(self.regions)))
+
         region_consistency = []
         for r in self.regions:
             region_consistency += r.is_consistent()
@@ -161,34 +182,26 @@ class Arena(ABC):
         return constraints
 
     def readable_by(self, component):
-        addr = new_addr()
+        addr = BitVec("addr", 32)
         return ForAll(addr, Implies(self.contains(addr), component.can_read(addr)))
 
     def not_readable_by(self, component):
-        addr = new_addr()
+        addr = BitVec("addr", 32)
         return Not(Exists(addr, And(self.contains(addr), component.can_read(addr))))
 
     def writeable_by(self, component):
-        addr = new_addr()
+        addr = BitVec("addr", 32)
         return ForAll(addr, Implies(self.contains(addr), component.can_write(addr)))
 
     def not_writeable_by(self, component):
-        addr = new_addr()
+        addr = BitVec("addr", 32)
         return Not(Exists(addr, And(self.contains(addr), component.can_write(addr))))
-
-
-count = -1
-
-
-def new_addr():
-    global count
-    count += 1
-    return BitVec("addr({})".format(count), 32)
 
 
 class PartitionArena(Arena):
     def __init__(self, name, partition, size, readers, writers):
         self.partition = partition
+        self.size = size
         start = BitVec(name + "/start", 32)
         super().__init__(name, start, start + size, readers, writers)
 
@@ -199,6 +212,7 @@ class PartitionArena(Arena):
 
 class FixedArena(Arena):
     def __init__(self, name, start, end, readers, writers):
+        self.size = end - start
         super().__init__(name, start, end, readers, writers)
 
 
