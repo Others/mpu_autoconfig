@@ -108,11 +108,11 @@ class Region(object):
         self.writeable = Bool(self.name + "/can_write")
 
     def is_consistent(self):
-        return [ULT(self.start, self.end),
-                is_pow_of_2(self.size),
-                self.size % self.hw_config.subregion_count == 0,
-                self.start % self.size == 0,
-                UGE(self.size, self.hw_config.region_min_size)]
+        return [Or(self.size == 0, And(ULT(self.start, self.end),
+                                       is_pow_of_2(self.size),
+                                       self.size % self.hw_config.subregion_count == 0,
+                                       self.start % self.size == 0,
+                                       UGE(self.size, self.hw_config.region_min_size)))]
 
     def is_enabled(self, addr):
         subregion_enabled = []
