@@ -73,20 +73,116 @@ def setup_config_1(ram_size, complex_overlap_constraint):  # IDEA: Just three sm
     return (hw_config, flash, sram, components, all_arenas)
 
 
-def setup_config_2():  # IDEA: Three small VMs + one big VM
-    pass
+def setup_config_2(ram_size, complex_overlap_constraint):  # IDEA: Three small VMs + one big VM
+    (hw_config, flash, sram) = get_hardware_configuration(ram_size, complex_overlap_constraint)
+    components = []
+    all_arenas = []
+
+    (comp, arenas) = vm_basicmath(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_dijkstra(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_gsm(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_big(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    return (hw_config, flash, sram, components, all_arenas)
 
 
-def setup_config_3():  # IDEA: Four small VMs + one big VM
-    pass
+def setup_config_3(ram_size, complex_overlap_constraint):  # IDEA: Four small VMs + one big VM
+    (hw_config, flash, sram) = get_hardware_configuration(ram_size, complex_overlap_constraint)
+    components = []
+    all_arenas = []
+
+    (comp, arenas) = vm_basicmath(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_dijkstra(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_gsm(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_pbmsrch(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_big(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    return (hw_config, flash, sram, components, all_arenas)
 
 
-def setup_config_4():  # IDEA: Five small VMs
-    pass
+def setup_config_4(ram_size, complex_overlap_constraint):  # IDEA: Five small VMs
+    (hw_config, flash, sram) = get_hardware_configuration(ram_size, complex_overlap_constraint)
+    components = []
+    all_arenas = []
+
+    (comp, arenas) = vm_basicmath(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_dijkstra(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_gsm(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_pbmsrch(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_rijndael(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    return (hw_config, flash, sram, components, all_arenas)
 
 
-def setup_config_5():  # IDEA: Five small VMs + one big VM
-    pass
+def setup_config_5(ram_size, complex_overlap_constraint):  # IDEA: Five small VMs + one big VM
+    (hw_config, flash, sram) = get_hardware_configuration(ram_size, complex_overlap_constraint)
+    components = []
+    all_arenas = []
+
+    (comp, arenas) = vm_basicmath(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_dijkstra(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_gsm(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_pbmsrch(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_rijndael(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    (comp, arenas) = vm_big(hw_config, flash, sram)
+    components.append(comp)
+    all_arenas += arenas
+
+    return (hw_config, flash, sram, components, all_arenas)
 
 
 # These functions turn a setup into an actual testable configuration

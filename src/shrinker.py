@@ -40,7 +40,7 @@ def check_fragmentation(config_generator):
     (components, arenas) = config_generator(0, False)
     min_size = sum(a.size
                    for a in arenas if isinstance(a, PartitionArena) and a.partition.name == "sram")
-    max_size = min_size * 3
+    max_size = int(min_size * 1.5)
 
     print("Min size", min_size, "Max size", max_size)
 

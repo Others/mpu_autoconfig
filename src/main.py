@@ -2,7 +2,11 @@
 from z3 import set_option
 
 from shrinker import check_fragmentation
-from vms import setup_config_1, configure_setup_with_io_manager
+from vms import \
+    configure_setup_with_io_manager, \
+    configure_setup_with_io_and_chaining, \
+    configure_setup_with_io_and_sharing, \
+    setup_config_1, setup_config_2, setup_config_3, setup_config_4, setup_config_5
 
 
 def kb(x):
@@ -39,12 +43,41 @@ def mb(x):
 #     return (components, arenas)
 
 
-SETUP_FUNCTION = setup_config_1
-FINALIZER_FUNCTION = configure_setup_with_io_manager
+def get_setup(i):
+    if i == 1:
+        return setup_config_1
+    elif i == 2:
+        return setup_config_2
+    elif i == 3:
+        return setup_config_3
+    elif i == 4:
+        return setup_config_4
+    elif i == 5:
+        return setup_config_5
+
+
+def get_finalizer(i):
+    if i == 1:
+        return configure_setup_with_io_manager
+    elif i == 2:
+        return configure_setup_with_io_and_chaining
+    elif i == 3:
+        return configure_setup_with_io_and_sharing
+
 
 if __name__ == '__main__':
     set_option(max_args=10000000, max_lines=1000000, max_depth=10000000, max_visited=1000000)
 
+    print("Enter setup selection (1 - 5):")
+    setup = input()
+
+    print("Enter shared memory selection (1 - 3):")
+    finalizer = input()
+
+    setup_function = get_setup(setup)
+    finalizer_function = get_finalizer(finalizer)
+
     def config_generator(ram_size, complex_overlap_constraint):
-        return FINALIZER_FUNCTION(SETUP_FUNCTION(ram_size, complex_overlap_constraint))
+        return finalizer_function(setup_function(ram_size, complex_overlap_constraint))
+
     check_fragmentation(config_generator)
